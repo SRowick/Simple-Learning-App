@@ -1,0 +1,139 @@
+﻿@page "/"
+
+<div class="container">
+    <div class="row">
+        <h1>Simple Learning App</h1>
+    </div>
+    <div class="row sm-4">
+        <div class="col-sm-3">
+            Enter your info
+        </div>
+        <div class="col-sm-2">
+            <input type="text"
+                   @onchange="UpdateInfoValue" />
+        </div>
+    </div>
+    <div class="row sm-4">
+        <div class="col-sm-3">
+            Choose Best Answer
+        </div>
+        <div class="col-sm-2">
+            <select id="categorySelector" @bind="selectedCategory">
+                <option value="">Please choose...</option>
+                    <optgroup label="Suggested">
+                        @foreach (var item in suggestedCategories)
+                        {
+                            <option value="@item">@item</option>
+                        }
+                    </optgroup>
+                    <optgroup label="Other Options:">
+                        @foreach (var item in otherCategories)
+                        {
+                            <option value="@item">@item</option>
+                        }
+                    </optgroup>
+            </select>
+        </div>
+        </div>
+        <div class="row sm-4">
+            <div class="col-sm-3">
+            </div>
+            <div class="col-sm-2">
+                <button @onclick="@(() => Submit())"
+                        type="button" value="Submit">
+                    <p2>Submit</p2>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @code
+    {
+        private string infoValue = "";
+        private string selectedCategory = "";
+
+        private List<string> suggestedCategories = new List<string>();
+        private List<string> otherCategories = new List<string>() { "Apple", "Pear", "Orange", "Banana", "Strawberry" };
+
+        private Dictionary<string, Dictionary<string, int>> associationDictionary = new Dictionary<string, Dictionary<string, int>>(); //dictionary for the user entered word and it's associated categories
+
+        private void UpdateInfoValue(ChangeEventArgs e)
+        {
+            infoValue = e.Value.ToString();
+
+            //update the suggested categories dropdown list
+            if(associationDictionary.ContainsKey(infoValue))
+            {
+                determineSuggestedCategories();
+            }
+            else //if we've never entered this word before, none of the categories should be suggested
+            {
+                suggestedCategories = new List<string>();
+                otherCategories = new List<string>() { "Apple", "Pear", "Orange", "Banana", "Strawberry" };
+            }
+        }
+
+        /*For the keyword (key), get it's dictionary (value). For that dictionary get the keys with the 3 highest values
+        and put them in suggestedCategories.Put the rest in otherCategories.*/
+        private void determineSuggestedCategories()
+        {
+            Dictionary<string, int> unsortedDictionary = associationDictionary[infoValue]; //get the dictionary
+            suggestedCategories = new List<string>();
+            otherCategories = new List<string>();
+
+            //sort the dictionary with a LINQ query
+            var sortedDictionary = from entry in unsortedDictionary orderby entry.Value descending select entry;
+
+            //put the three highest values in suggestedCategories. Put the rest in otherCategories.
+            int i = 0;
+            foreach(var item in sortedDictionary)
+            {
+                if(i < 3)
+                {
+                    if(item.Value != 0)
+                    {
+                        suggestedCategories.Add(item.Key);
+                    }
+                    else
+                    {
+                        otherCategories.Add(item.Key);
+                    }
+                }
+                else
+                {
+                    otherCategories.Add(item.Key);
+                }
+                i++;
+            }
+        }
+
+        private void Submit()
+        {
+            try
+            {
+                //String selectedCategorySaved = selectedCategory;
+                if (!(associationDictionary.ContainsKey(infoValue))) //if this is a new word, add it to the associationDictionary
+                {
+                    var categories = new Dictionary<string, int>()
+                    {
+                        ["Apple"] = 0,
+                        ["Pear"] = 0,
+                        ["Orange"] = 0,
+                        ["Banana"] = 0,
+                        ["Strawberry"] = 0
+                    };
+
+                    associationDictionary.Add(infoValue, categories);
+                }
+
+                associationDictionary[infoValue][selectedCategory] += 1; //increase value for category chosen according to info entered
+
+                determineSuggestedCategories(); //called to update the dropdown list
+                selectedCategory = null; //set category selector back to 'Please choose...'
+            }
+            catch //error handling if the user keeps 'Please choose...' as their category
+            {
+                //nothing needs to happen
+            }
+        }
+    }
